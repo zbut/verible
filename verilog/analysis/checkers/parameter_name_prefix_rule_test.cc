@@ -76,7 +76,9 @@ TEST(ParameterNamePrefixRuleTest, RejectTests) {
       {"module foo #(int ", {kToken, "Bar_1_Two"}, "); endmodule"},
       {"module foo; localparam int ",
        {kToken, "bar"},
-       " = 1; localparam int ", {kToken, "BarSecond"}, " = 2; "
+       " = 1; localparam int ",
+       {kToken, "BarSecond"},
+       " = 2; "
        "endmodule"},
       {"module foo; localparam int ",
        {kToken, "bar"},

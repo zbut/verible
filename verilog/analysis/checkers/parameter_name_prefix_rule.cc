@@ -54,8 +54,7 @@ const LintRuleDescriptor& ParameterNamePrefixRule::GetDescriptor() {
       .topic = "binary-parameters",
       .desc =
           "Checks that parameter name starts P_ and localparam"
-          "name starts with LP_"
-  };
+          "name starts with LP_"};
   return d;
 }
 
@@ -64,8 +63,8 @@ static const Matcher& ParamDeclMatcher() {
   return matcher;
 }
 
-void ParameterNamePrefixRule::HandleSymbol(
-    const verible::Symbol& symbol, const SyntaxTreeContext& context) {
+void ParameterNamePrefixRule::HandleSymbol(const verible::Symbol& symbol,
+                                           const SyntaxTreeContext& context) {
   verible::matcher::BoundSymbolManager manager;
   if (ParamDeclMatcher().Matches(symbol, &manager)) {
     if (IsParamTypeDeclaration(symbol)) return;
@@ -76,10 +75,10 @@ void ParameterNamePrefixRule::HandleSymbol(
     for (const auto& id : identifiers) {
       const auto param_name = id->text();
 
-      if ((param_decl_token == TK_localparam && 
-            !absl::StartsWithIgnoreCase(param_name, "lp_")) ||
-          (param_decl_token == TK_parameter && 
-            !absl::StartsWithIgnoreCase(param_name, "p_")))
+      if ((param_decl_token == TK_localparam &&
+           !absl::StartsWithIgnoreCase(param_name, "lp_")) ||
+          (param_decl_token == TK_parameter &&
+           !absl::StartsWithIgnoreCase(param_name, "p_")))
         violations_.insert(LintViolation(
             *id, absl::StrCat(kMessage, "  (got: ", param_name, ")"), context));
     }
