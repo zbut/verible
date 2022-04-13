@@ -43,15 +43,13 @@ using Matcher = verible::matcher::Matcher;
 // Register PortNameStyleRule.
 VERILOG_REGISTER_LINT_RULE(PortNameStyleRule);
 
-static const char kMessage[] =
-    "Port names must be styled with ALL_CAPS";
+static const char kMessage[] = "Port names must be styled with ALL_CAPS";
 
 const LintRuleDescriptor& PortNameStyleRule::GetDescriptor() {
   static const LintRuleDescriptor d{
       .name = "port-name-style",
       .topic = "port-names",
-      .desc =
-          "Checks that port names follow ALL_CAPS naming convention.",
+      .desc = "Checks that port names follow ALL_CAPS naming convention.",
   };
   return d;
 }
@@ -62,7 +60,7 @@ static const Matcher& PortMatcher() {
 }
 
 void PortNameStyleRule::HandleSymbol(const verible::Symbol& symbol,
-                                          const SyntaxTreeContext& context) {
+                                     const SyntaxTreeContext& context) {
   verible::matcher::BoundSymbolManager manager;
   if (PortMatcher().Matches(symbol, &manager)) {
     const auto* identifier_leaf =
