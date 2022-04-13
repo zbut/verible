@@ -1,4 +1,5 @@
 module mismatched_labels(
+// verilog_lint: waive port-name-style
   input clk_i
 );
 
