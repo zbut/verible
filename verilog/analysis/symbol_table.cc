@@ -31,6 +31,7 @@
 #include "common/util/enum_flags.h"
 #include "common/util/logging.h"
 #include "common/util/spacer.h"
+#include "common/util/tree_operations.h"
 #include "common/util/value_saver.h"
 #include "verilog/CST/class.h"
 #include "verilog/CST/declaration.h"
@@ -132,19 +133,19 @@ static std::string ReferenceNodeFullPathString(
 
 static std::ostream& operator<<(std::ostream& stream,
                                 const ReferenceComponentNode& ref_node) {
-  ref_node.PrintTree(
-      &stream,
+  PrintTree(
+      ref_node, &stream,
       [](std::ostream& s, const ReferenceComponent& ref_comp) -> std::ostream& {
         return s << ref_comp;
       });
   return stream;
 }
 
-// Validates iterator/pointer stability when calling VectorTree::NewChild.
+// Validates iterator/pointer stability when appending new child.
 // Detects unwanted reallocation.
 static ReferenceComponentNode* CheckedNewChildReferenceNode(
     ReferenceComponentNode* parent, const ReferenceComponent& component) {
-  const auto& siblings(parent->Children());
+  auto& siblings = parent->Children();
   if (!siblings.empty()) {
     CHECK_LT(siblings.size(), siblings.capacity())
         << "\nReallocation would invalidate pointers to reference nodes at:\n"
@@ -152,7 +153,8 @@ static ReferenceComponentNode* CheckedNewChildReferenceNode(
         << component << "\nFix: pre-allocate child nodes.";
   }
   // Otherwise, this first node had no prior siblings, so no need to check.
-  return parent->NewChild(component);  // copy
+  siblings.emplace_back(component);  // copy
+  return &siblings.back();
 }
 
 static absl::Status DiagnoseMemberSymbolResolutionFailure(
@@ -437,7 +439,7 @@ class SymbolTable::Builder : public TreeContextVisitor {
       const size_t num_params = FindAllNamedParams(node).size();
       // +1 to accommodate the slot needed for a nested type reference
       // e.g. for "B" in "A#(.X(), .Y(), ...)::B"
-      reference_branch_point_->SetExpectedChildrenUpperBound(num_params + 1);
+      reference_branch_point_->Children().reserve(num_params + 1);
     }
     Descend(node);
   }
@@ -448,7 +450,7 @@ class SymbolTable::Builder : public TreeContextVisitor {
       // FindAll* will also catch actual port connections inside preprocessing
       // conditionals.
       const size_t num_ports = FindAllActualNamedPort(node).size();
-      reference_branch_point_->SetExpectedChildrenUpperBound(num_ports);
+      reference_branch_point_->Children().reserve(num_ports);
     }
     Descend(node);
   }
@@ -459,7 +461,7 @@ class SymbolTable::Builder : public TreeContextVisitor {
       // FindAll* will also catch call arguments inside preprocessing
       // conditionals.
       const size_t num_args = FindAllNamedParams(node).size();
-      reference_branch_point_->SetExpectedChildrenUpperBound(num_args);
+      reference_branch_point_->Children().reserve(num_args);
     }
     Descend(node);
   }
@@ -913,7 +915,7 @@ class SymbolTable::Builder : public TreeContextVisitor {
                                              .syntax_origin = &element,
                                          });
     if (!p.second) {
-      DiagnoseSymbolAlreadyExists(name);
+      DiagnoseSymbolAlreadyExists(name, p.first->first);
     }
     return &p.first->second;  // scope of the new (or pre-existing symbol)
   }
@@ -937,7 +939,7 @@ class SymbolTable::Builder : public TreeContextVisitor {
             .declared_type = *ABSL_DIE_IF_NULL(declaration_type_info_),  // copy
         });
     if (!p.second) {
-      DiagnoseSymbolAlreadyExists(name);
+      DiagnoseSymbolAlreadyExists(name, p.first->first);
     }
     VLOG(1) << "end of " << __FUNCTION__ << ": " << name;
     return p.first->second;  // scope of the new (or pre-existing symbol)
@@ -1207,10 +1209,19 @@ class SymbolTable::Builder : public TreeContextVisitor {
     Descend(variable);
   }
 
-  void DiagnoseSymbolAlreadyExists(absl::string_view name) {
-    diagnostics_.push_back(absl::AlreadyExistsError(
-        absl::StrCat("Symbol \"", name, "\" is already defined in the ",
-                     CurrentScopeFullPath(), " scope.")));
+  void DiagnoseSymbolAlreadyExists(absl::string_view name,
+                                   absl::string_view previous) {
+    std::ostringstream here_print;
+    here_print << source_->GetTextStructure()->GetRangeForText(name);
+
+    std::ostringstream previous_print;
+    previous_print << source_->GetTextStructure()->GetRangeForText(previous);
+
+    // TODO(hzeller): output in some structured form easy to use downstream.
+    diagnostics_.push_back(absl::AlreadyExistsError(absl::StrCat(
+        source_->ReferencedPath(), ":", here_print.str(), " Symbol \"", name,
+        "\" is already defined in the ", CurrentScopeFullPath(), " scope at ",
+        previous_print.str())));
   }
 
   absl::StatusOr<SymbolTableNode*> LookupOrInjectOutOfLineDefinition(
@@ -1483,7 +1494,7 @@ absl::Status ReferenceComponent::ResolveSymbol(
 const ReferenceComponentNode* DependentReferences::LastLeaf() const {
   if (components == nullptr) return nullptr;
   const ReferenceComponentNode* node = components.get();
-  while (!node->is_leaf()) node = &node->Children().front();
+  while (!is_leaf(*node)) node = &node->Children().front();
   return node;
 }
 
@@ -1492,7 +1503,7 @@ template <typename RefType>
 static RefType* ReferenceLastTypeComponent(RefType* node) {
   // This references a type that may be nested and have name parameters.
   // From A#(.B())::C#(.D()), we want C as the desired type component.
-  while (!node->is_leaf()) {
+  while (!is_leaf(*node)) {
     // There should be at most one non-parameter at each branch point,
     // so stop at the first one found.
     // In the above example, this would find "C" among {"B", "C"} inside "A".
@@ -1544,7 +1555,7 @@ ReferenceComponentNode* DependentReferences::PushReferenceComponent(
 void DependentReferences::VerifySymbolTableRoot(
     const SymbolTableNode* root) const {
   if (components != nullptr) {
-    components->ApplyPreOrder([=](const ReferenceComponent& component) {
+    ApplyPreOrder(*components, [=](const ReferenceComponent& component) {
       component.VerifySymbolTableRoot(root);
     });
   }
@@ -1806,12 +1817,12 @@ void DependentReferences::Resolve(
   // References are arranged in dependency trees.
   // Parent node references must be resolved before children nodes,
   // hence a pre-order traversal.
-  components->ApplyPreOrder(
-      [&context, diagnostics](ReferenceComponentNode& node) {
-        ResolveReferenceComponentNode(&node, context, diagnostics);
-        // TODO: minor optimization, when resolution for a node fails,
-        // skip checking that node's subtree; early terminate.
-      });
+  ApplyPreOrder(*components,
+                [&context, diagnostics](ReferenceComponentNode& node) {
+                  ResolveReferenceComponentNode(&node, context, diagnostics);
+                  // TODO: minor optimization, when resolution for a node fails,
+                  // skip checking that node's subtree; early terminate.
+                });
   VLOG(1) << "end of " << __FUNCTION__;
 }
 
@@ -1881,7 +1892,7 @@ std::ostream& operator<<(std::ostream& stream,
 void DeclarationTypeInfo::VerifySymbolTableRoot(
     const SymbolTableNode* root) const {
   if (user_defined_type != nullptr) {
-    user_defined_type->ApplyPreOrder([=](const ReferenceComponent& component) {
+    ApplyPreOrder(*user_defined_type, [=](const ReferenceComponent& component) {
       component.VerifySymbolTableRoot(root);
     });
   }

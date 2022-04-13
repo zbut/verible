@@ -29,6 +29,7 @@
 #include "common/util/file_util.h"
 #include "common/util/logging.h"
 #include "common/util/range.h"
+#include "common/util/tree_operations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "verilog/analysis/verilog_project.h"
@@ -912,7 +913,7 @@ TEST(BuildSymbolTableTest, ModuleInstance) {
       }
       {  // self-reference to "rr" instance
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(rr_self_ref, ref_map, "rr");
-        EXPECT_TRUE(rr_self_ref->components->is_leaf());  // no named ports
+        EXPECT_TRUE(is_leaf(*rr_self_ref->components));  // no named ports
         // self-reference is already bound.
         EXPECT_EQ(rr_self_ref->components->Value().resolved_symbol, &rr);
       }
@@ -1854,7 +1855,7 @@ TEST(BuildSymbolTableTest, ReferenceOneParameterExpression) {
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(ref, ref_map, "mint");
   const ReferenceComponent& ref_comp(ref->components->Value());
-  EXPECT_TRUE(ref->components->is_leaf());
+  EXPECT_TRUE(is_leaf(*ref->components));
   EXPECT_EQ(ref_comp.identifier, "mint");
   EXPECT_EQ(ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -1892,7 +1893,7 @@ TEST(BuildSymbolTableTest, OneUnresolvedReferenceInExpression) {
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(ref, ref_map, "spice");
   const ReferenceComponent& ref_comp(ref->components->Value());
-  EXPECT_TRUE(ref->components->is_leaf());
+  EXPECT_TRUE(is_leaf(*ref->components));
   EXPECT_EQ(ref_comp.identifier, "spice");
   EXPECT_EQ(ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -2574,9 +2575,9 @@ TEST(BuildSymbolTableTest, ModuleExplicitAndImplicitDeclarations) {
 
 TEST(BuildSymbolTableTest, ModuleImplicitRedeclared) {
   TestVerilogSourceFile src("foo.sv",
-                            "module m;"
-                            "assign a = 1'b0;"
-                            "wire a;"
+                            "module m;\n"
+                            "assign a = 1'b0;\n"
+                            "wire a;\n"
                             "endmodule\n");
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
@@ -2586,7 +2587,8 @@ TEST(BuildSymbolTableTest, ModuleImplicitRedeclared) {
   EXPECT_EQ(build_diagnostics.size(), 1);
   EXPECT_FALSE(build_diagnostics.front().ok());
   EXPECT_EQ(build_diagnostics.front().message(),
-            "Symbol \"a\" is already defined in the $root::m scope.");
+            "foo.sv:3:6: Symbol \"a\" is already defined in the $root::m scope "
+            "at 2:8:");
 }
 
 TEST(BuildSymbolTableTest, ClassDeclarationSingle) {
@@ -7998,7 +8000,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstance) {
       }
       {  // self-reference to "pp_inst" instance
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_inst_self_ref, ref_map, "pp_inst");
-        EXPECT_TRUE(pp_inst_self_ref->components->is_leaf());  // no named ports
+        EXPECT_TRUE(is_leaf(*pp_inst_self_ref->components));  // no named ports
         // self-reference is already bound.
         EXPECT_EQ(pp_inst_self_ref->components->Value().resolved_symbol,
                   &pp_inst);
@@ -8021,7 +8023,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstance) {
       }
       {  // self-reference to "qq_inst" instance
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_inst_self_ref, ref_map, "qq_inst");
-        EXPECT_TRUE(qq_inst_self_ref->components->is_leaf());  // no named ports
+        EXPECT_TRUE(is_leaf(*qq_inst_self_ref->components));  // no named ports
         // self-reference is already bound.
         EXPECT_EQ(qq_inst_self_ref->components->Value().resolved_symbol,
                   &qq_inst);
@@ -8145,7 +8147,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectOneFileAtATime) {
     }
     {  // self-reference to "pp_inst" instance
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_inst_self_ref, ref_map, "pp_inst");
-      EXPECT_TRUE(pp_inst_self_ref->components->is_leaf());  // no named ports
+      EXPECT_TRUE(is_leaf(*pp_inst_self_ref->components));  // no named ports
       // self-reference is already bound.
       EXPECT_EQ(pp_inst_self_ref->components->Value().resolved_symbol,
                 &pp_inst);
@@ -8166,7 +8168,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectOneFileAtATime) {
     }
     {  // self-reference to "qq_inst" instance
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_inst_self_ref, ref_map, "qq_inst");
-      EXPECT_TRUE(qq_inst_self_ref->components->is_leaf());  // no named ports
+      EXPECT_TRUE(is_leaf(*qq_inst_self_ref->components));  // no named ports
       // self-reference is already bound.
       EXPECT_EQ(qq_inst_self_ref->components->Value().resolved_symbol,
                 &qq_inst);
@@ -8295,7 +8297,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectFilesGood) {
     }
     {  // self-reference to "pp_inst" instance
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_inst_self_ref, ref_map, "pp_inst");
-      EXPECT_TRUE(pp_inst_self_ref->components->is_leaf());  // no named ports
+      EXPECT_TRUE(is_leaf(*pp_inst_self_ref->components));  // no named ports
       // self-reference is already bound.
       EXPECT_EQ(pp_inst_self_ref->components->Value().resolved_symbol,
                 &pp_inst);
@@ -8316,7 +8318,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectFilesGood) {
     }
     {  // self-reference to "qq_inst" instance
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_inst_self_ref, ref_map, "qq_inst");
-      EXPECT_TRUE(qq_inst_self_ref->components->is_leaf());  // no named ports
+      EXPECT_TRUE(is_leaf(*qq_inst_self_ref->components));  // no named ports
       // self-reference is already bound.
       EXPECT_EQ(qq_inst_self_ref->components->Value().resolved_symbol,
                 &qq_inst);
@@ -8422,7 +8424,7 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
     }
     {  // self-reference to "ss_inst" instance
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(ss_inst_self_ref, ref_map, "ss_inst");
-      EXPECT_TRUE(ss_inst_self_ref->components->is_leaf());  // no named ports
+      EXPECT_TRUE(is_leaf(*ss_inst_self_ref->components));  // no named ports
       // self-reference is already bound.
       EXPECT_EQ(ss_inst_self_ref->components->Value().resolved_symbol,
                 &ss_inst);
@@ -8445,7 +8447,7 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
     }
     {  // self-reference to "pp_inst" instance
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_inst_self_ref, ref_map, "pp_inst");
-      EXPECT_TRUE(pp_inst_self_ref->components->is_leaf());  // no named ports
+      EXPECT_TRUE(is_leaf(*pp_inst_self_ref->components));  // no named ports
       // self-reference is already bound.
       EXPECT_EQ(pp_inst_self_ref->components->Value().resolved_symbol,
                 &pp_inst);
@@ -8468,7 +8470,7 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
     }
     {  // self-reference to "qq_inst" instance
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_inst_self_ref, ref_map, "qq_inst");
-      EXPECT_TRUE(qq_inst_self_ref->components->is_leaf());  // no named ports
+      EXPECT_TRUE(is_leaf(*qq_inst_self_ref->components));  // no named ports
       // self-reference is already bound.
       EXPECT_EQ(qq_inst_self_ref->components->Value().resolved_symbol,
                 &qq_inst);
@@ -8612,7 +8614,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
       }
       {  // self-reference to "ss_inst" instance
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(ss_inst_self_ref, ref_map, "ss_inst");
-        EXPECT_TRUE(ss_inst_self_ref->components->is_leaf());  // no named ports
+        EXPECT_TRUE(is_leaf(*ss_inst_self_ref->components));  // no named ports
         // self-reference is already bound.
         EXPECT_EQ(ss_inst_self_ref->components->Value().resolved_symbol,
                   &ss_inst);
@@ -8635,7 +8637,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
       }
       {  // self-reference to "pp_inst" instance
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_inst_self_ref, ref_map, "pp_inst");
-        EXPECT_TRUE(pp_inst_self_ref->components->is_leaf());  // no named ports
+        EXPECT_TRUE(is_leaf(*pp_inst_self_ref->components));  // no named ports
         // self-reference is already bound.
         EXPECT_EQ(pp_inst_self_ref->components->Value().resolved_symbol,
                   &pp_inst);
@@ -8658,7 +8660,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
       }
       {  // self-reference to "qq_inst" instance
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_inst_self_ref, ref_map, "qq_inst");
-        EXPECT_TRUE(qq_inst_self_ref->components->is_leaf());  // no named ports
+        EXPECT_TRUE(is_leaf(*qq_inst_self_ref->components));  // no named ports
         // self-reference is already bound.
         EXPECT_EQ(qq_inst_self_ref->components->Value().resolved_symbol,
                   &qq_inst);
