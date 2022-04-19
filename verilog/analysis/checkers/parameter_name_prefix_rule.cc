@@ -44,7 +44,7 @@ using verible::matcher::Matcher;
 // Register ParameterNamePrefixRule.
 VERILOG_REGISTER_LINT_RULE(ParameterNamePrefixRule);
 
-static const char kMessageParam[] = "Use P_ prefix for parmeter definitions.";
+static const char kMessageParam[] = "Use P_ prefix for parameter definitions.";
 static const char kMessageLocalParam[] =
     "Use LP_ prefix for localparam definitions.";
 
@@ -53,7 +53,7 @@ const LintRuleDescriptor& ParameterNamePrefixRule::GetDescriptor() {
       .name = "parameter_name_prefix",
       .topic = "binary-parameters",
       .desc =
-          "Checks that parameter name starts P_ and localparam"
+          "Checks that parameter name starts with P_ and localparam"
           "name starts with LP_"};
   return d;
 }
@@ -76,15 +76,17 @@ void ParameterNamePrefixRule::HandleSymbol(const verible::Symbol& symbol,
       const auto param_name = id->text();
 
       if (param_decl_token == TK_localparam &&
-          !absl::StartsWithIgnoreCase(param_name, "lp_"))
+          !absl::StartsWithIgnoreCase(param_name, "lp_")) {
         violations_.insert(LintViolation(
             *id, absl::StrCat(kMessageLocalParam, "  (got: ", param_name, ")"),
             context));
+      }
       if (param_decl_token == TK_parameter &&
-          !absl::StartsWithIgnoreCase(param_name, "p_"))
+          !absl::StartsWithIgnoreCase(param_name, "p_")) {
         violations_.insert(LintViolation(
             *id, absl::StrCat(kMessageParam, "  (got: ", param_name, ")"),
             context));
+      }
     }
   }
 }
