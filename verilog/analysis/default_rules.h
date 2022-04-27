@@ -52,6 +52,7 @@ constexpr const char* kDefaultRuleSet[] = {
     "plusarg-assignment",
     "macro-name-style",
     "parameter-name-style",
+    "parameter-name-prefix",
     "typedef-enums",
     "forbid-defparam",
     "typedef-structs-unions",
