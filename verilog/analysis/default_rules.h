@@ -67,6 +67,7 @@ constexpr const char* kDefaultRuleSet[] = {
     "constraint-name-style",
     "suggest-parentheses",
     "truncated-numeric-literal",
+    "port-name-style",
     // TODO(fangism): enable in production:
     // TODO(b/155128436): "uvm-macro-semicolon"
     // TODO(b/117131903): "proper-parameter-declaration",
