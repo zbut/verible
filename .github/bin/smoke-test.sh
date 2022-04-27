@@ -130,12 +130,12 @@ declare -A ExpectedFailCount
 
 ExpectedFailCount[syntax:ibex]=13
 ExpectedFailCount[lint:ibex]=13
-ExpectedFailCount[project:ibex]=173
+ExpectedFailCount[project:ibex]=174
 
 ExpectedFailCount[syntax:opentitan]=28
 ExpectedFailCount[lint:opentitan]=28
 ExpectedFailCount[formatter:opentitan]=1
-ExpectedFailCount[project:opentitan]=650
+ExpectedFailCount[project:opentitan]=654
 
 ExpectedFailCount[project:Cores-SweRV]=21
 
