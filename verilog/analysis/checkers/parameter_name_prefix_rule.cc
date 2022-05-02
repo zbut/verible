@@ -50,7 +50,7 @@ static const char kMessageLocalParam[] =
 
 const LintRuleDescriptor& ParameterNamePrefixRule::GetDescriptor() {
   static const LintRuleDescriptor d{
-      .name = "parameter_name_prefix",
+      .name = "parameter-name-prefix",
       .topic = "binary-parameters",
       .desc =
           "Checks that parameter name starts with P_ and localparam"

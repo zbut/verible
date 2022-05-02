@@ -1,1 +1,1 @@
-parameter int P_HELLO_WORLD = 1;
+parameter int HELLO_WORLD = 1;
