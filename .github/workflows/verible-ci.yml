@@ -263,7 +263,7 @@ jobs:
         restore-keys: bazelcache_macos_
 
     - name: Tests
-      run: bazel test --test_output=all --cxxopt=-Wno-range-loop-analysis //...
+      run: bazel test --test_output=errors --cxxopt=-Wno-range-loop-analysis //...
 
 
   WindowsBuild:
