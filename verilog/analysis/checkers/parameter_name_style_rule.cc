@@ -54,8 +54,7 @@ const LintRuleDescriptor& ParameterNameStyleRule::GetDescriptor() {
           "CamelCase and ALL_CAPS, ORed together with the pipe-symbol(|). "
           "Empty configuration: no style enforcement.",
       .param = {{"localparam_style", "ALL_CAPS", "Style of localparam name"},
-                {"parameter_style", "ALL_CAPS",
-                 "Style of parameter names"}},
+                {"parameter_style", "ALL_CAPS", "Style of parameter names"}},
   };
   return d;
 }
