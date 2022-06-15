@@ -56,7 +56,7 @@ class ParameterNameStyleRule : public verible::SyntaxTreeLintRule {
   };
 
   uint32_t localparam_allowed_style_ = kAllCaps;
-  uint32_t parameter_allowed_style_ =  kAllCaps;
+  uint32_t parameter_allowed_style_ = kAllCaps;
 
   std::set<verible::LintViolation> violations_;
 };
