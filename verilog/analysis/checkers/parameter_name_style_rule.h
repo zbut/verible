@@ -30,8 +30,8 @@ namespace analysis {
 
 // ParameterNameStyleRule checks that each non-type parameter/localparam
 // follows the correct naming convention.
-// parameter should follow UpperCamelCase (preferred) or ALL_CAPS.
-// localparam should follow UpperCamelCase.
+// parameter should follow ALL_CAPS.
+// localparam should follow ALL_CAPS.
 class ParameterNameStyleRule : public verible::SyntaxTreeLintRule {
  public:
   using rule_type = verible::SyntaxTreeLintRule;
@@ -55,8 +55,8 @@ class ParameterNameStyleRule : public verible::SyntaxTreeLintRule {
     kAllCaps = (1 << 1),
   };
 
-  uint32_t localparam_allowed_style_ = kUpperCamelCase;
-  uint32_t parameter_allowed_style_ = kUpperCamelCase | kAllCaps;
+  uint32_t localparam_allowed_style_ = kAllCaps;
+  uint32_t parameter_allowed_style_ = kAllCaps;
 
   std::set<verible::LintViolation> violations_;
 };
